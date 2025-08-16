@@ -1,0 +1,133 @@
+#import libraries
+import pandas as pd
+import seaborn as sns
+import numpy as np
+import matplotlib.pyplot as plt
+import warnings
+warnings.filterwarnings('ignore')
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import r2_score
+
+#import data
+data = pd.read_csv('cbb25.csv')
+
+#check for missing values 
+missing_vals = data.isnull().sum()
+print('sum of missing values per column:')
+print(missing_vals)
+
+#convert year from text to data format
+if 'YEAR' in data.columns:
+    df['DATE'] = pd.to_datetime(df['YEAR'], format='%Y')
+
+data.info()
+
+#visulizations and summary statistics
+wins_by_conf = data.groupby('CONF')['W'].sum()
+
+# Visualize the distribution of wins (W) by conference (CONF) using a histogram
+plt.figure(figsize=(10, 8))
+plt.bar(wins_by_conf.index, wins_by_conf.values)
+plt.title('Total Wins by Conference')
+plt.xlabel('Conference')
+plt.ylabel('Wins')
+plt.xticks(rotation=90)
+plt.show()
+
+#summary statistics
+print(data.describe())
+
+#Visualize relationship between Seed (1st-16th) and ADJOE: Adjusted Offensive Efficiency 
+g = sns.catplot(
+    data=data,
+    x="ADJOE", y="G", row="SEED",
+    kind="box", orient="h",
+    sharex=False, margin_titles=True,
+    height=2, aspect=4,
+)
+g.set(xlabel="ADJOE", ylabel="Games Played")
+g.set_titles(row_template="{row_name} Seed")
+
+#correlation map for feature selection using only numeric variables
+numeric_df = data.select_dtypes(include=[np.number])
+if numeric_df.shape[1] >= 4:
+    plt.figure(figsize=(12, 10))
+    cor = numeric_df.corr()
+    sns.heatmap(cor, annot=True, fmt='.2f', cmap='coolwarm')
+    plt.title('Correlation Heatmap of Numeric Features')
+    plt.tight_layout()
+    plt.show()
+
+#feature selection 
+features = ['W', 'ADJOE', 'ADJDE', 'BARTHAG', 'EFG_O', 'EFG_D', 'TOR', 'TORD', 'ORB', 'DRB', '3P_O']
+
+#plot features and remove NULL values
+if all(col in data.columns for col in features):
+    sns.pairplot(data[features].dropna())
+    plt.show()
+
+#predictive modeling -- target column is Wins (W)
+cat_col = ['TEAM', 'CONF', 'POSTSEASON', 'DATE']
+target_col = 'W'
+
+# Filter features that are numeric and not in the exclusion list
+features = [col for col in data.columns if col not in cat_col + [target_col] and pd.api.types.is_numeric_dtype(data[col])]
+
+#drop NULL values
+X = data[features].dropna()
+y = data.loc[X.index, target_col]
+
+#split dataset into test and train 
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+#Train random forrest model 
+rf = RandomForestRegressor(n_estimators=100, random_state=42)
+rf.fit(X_train, y_train)
+
+# Predict on the test set and calculate the R-squared score
+y_pred = rf.predict(X_test)
+score = r2_score(y_test, y_pred)
+print(f"R2 Score of the model: {score:.3f}")
+
+# Permutation importance using feature importances from the Random Forest
+important_features = rf.feature_importances_
+indices = np.argsort(important_features)
+
+plt.figure(figsize=(10, 6))
+plt.barh(range(len(important_features)), important_features[indices], color='skyblue')
+plt.yticks(range(len(important_features)), [features[i] for i in indices])
+plt.xlabel('Feature Importance')
+plt.title('Permutation Feature Importance')
+plt.tight_layout()
+plt.show()
+
+#remove less important features and re-fit model 
+features_2 = ['WAB', 'ORB', 'ADJDE', 'EFG_D', 'EFG_O', '2P_O'] #features from previous model with high importance
+
+X = data[features_2].dropna()
+y = data.loc[X.index, target_col]
+
+#split dataset into test and train 
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+#Train random forrest model 
+rf = RandomForestRegressor(n_estimators=100, random_state=42)
+rf.fit(X_train, y_train)
+
+# Predict on the test set and calculate the R-squared score
+y_pred = rf.predict(X_test)
+score = r2_score(y_test, y_pred)
+print(f"R2 Score of the model: {score:.3f}")
+
+# Permutation importance using feature importances from the Random Forest
+important_features = rf.feature_importances_
+indices = np.argsort(important_features)
+
+plt.figure(figsize=(10, 6))
+plt.barh(range(len(important_features)), important_features[indices], color='skyblue')
+plt.yticks(range(len(important_features)), [features[i] for i in indices])
+plt.xlabel('Feature Importance')
+plt.title('Permutation Feature Importance')
+plt.tight_layout()
+plt.show()
