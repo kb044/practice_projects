@@ -13,5 +13,5 @@ Based on NLP Fake News Detector guided project taught by Ryan Ahmed.
 Analysis of 1986-1987 baseball data 
 Data from: https://www.kaggle.com/datasets/mathchi/hitters-baseball-data/code
 
-##Project 4 
+## Project 4 
 LoL tournament predictions. Using tensorflow and regression models
