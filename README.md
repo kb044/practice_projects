@@ -18,3 +18,6 @@ LoL tournament predictions. Using tensorflow and regression models
 
 ### Project 5 
 Healthcare analysis. Multiple predictive models. Exploratory analysis
+
+### Project 6
+Predict price of eth. Time series analysis.  
